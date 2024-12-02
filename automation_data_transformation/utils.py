@@ -25,7 +25,7 @@ def select_from_dropdown(title, message, options):
         top.destroy()
 
     tk.Button(top, text="Confirm", width=15, command=confirm_selection).pack(pady=5)
-    top.mainloop()
+    top.wait_window()
     return selected_value
 
 def single_select_from_dropdown( title, message, options):

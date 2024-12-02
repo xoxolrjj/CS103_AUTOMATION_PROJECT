@@ -1,4 +1,4 @@
-import tkinter as tk
+
 import customtkinter as ctk
 from data_operations import DataOperations
 
@@ -19,7 +19,7 @@ class DataTransformationApp:
         self.root.configure(bg="#f0f4f8")  # Light subtle background color
         self.root.resizable(False, False)
 
-    def setup_header(self):
+    def setup_header(self): 
         """Set up the header section."""
         header_frame = ctk.CTkFrame(self.root, fg_color="#ffffff", corner_radius=15)
         header_frame.pack(pady=10, padx=10, fill="x")

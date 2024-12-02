@@ -1,22 +1,169 @@
-import seaborn as sns
+"""
+Data Transformation Toolkit
+---------------------------
+A GUI-based application for performing data transformation tasks such as deduplication, cleansing,
+format revisioning, merging, and visualization using Python, pandas, and customtkinter.
+"""
+
+# Standard Libraries
 import tkinter as tk
+from tkinter import Label, filedialog, messagebox, simpledialog, ttk, Toplevel
+
+# Third-party Libraries
+import customtkinter as ctk
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
-from matplotlib import pyplot as plt
-from tkinter import messagebox
-from tkinter import filedialog, messagebox, simpledialog, ttk
-from utils import single_select_from_dropdown
-from utils import multi_select_from_dropdown
-from utils import show_stats_table
-from utils import save_to_file_dialog
-from utils import select_from_dropdown
- 
-class DataOperations:
-    def __init__(self):
-        self.data = None
-        self.root = tk.Tk()
-        self.root.withdraw()  # Hide the root window
-        
+
+
+class DataTransformationApp:
+
+    def __init__(self, root):
+        self.root = root
+        self.setup_root()
+        self.data = None  # Initialize self.data to None
+        self.setup_header()
+        self.setup_button_frame()
+        self.setup_footer()
+
+    def setup_root(self):
+        """Configure the main window."""
+        self.root.title("Data Transformation Toolkit")
+        self.root.geometry("850x700")
+        self.root.configure(bg="#f0f4f8")  # Light subtle background color
+        self.root.resizable(False, False)
+
+    def setup_header(self):
+        """Set up the header section."""
+        header_frame = ctk.CTkFrame(self.root, fg_color="#ffffff", corner_radius=15)
+        header_frame.pack(pady=10, padx=10, fill="x")
+
+        # Title Label
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text="DATA TRANSFORMATION TOOLKIT",
+            font=ctk.CTkFont(size=24, weight="bold"),
+            text_color="#007ACC"
+        )
+        title_label.pack(pady=15)
+
+        # Separator
+        separator = ctk.CTkFrame(header_frame, height=2, fg_color="#E0E0E0")
+        separator.pack(fill="x", pady=10)
+
+    def setup_button_frame(self):
+        """Create a frame for the buttons."""
+        button_frame = ctk.CTkFrame(self.root, fg_color="#ffffff", corner_radius=15)
+        button_frame.pack(pady=20, padx=20, fill="both", expand=True)
+
+        # Instruction Label
+        instruction_label = ctk.CTkLabel(
+            button_frame,
+            text="Choose an operation to get started:",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color="#333333"
+        )
+        instruction_label.grid(row=0, column=0, columnspan=2, pady=15)
+
+        # Buttons (arranged in grid layout)
+        self.create_button(button_frame, "Upload Your File", self.upload_file, row=1, column=0, color="#4CAF50")
+        self.create_button(button_frame, "1. Data Deduplication", self.data_deduplication, row=2, column=0)
+        self.create_button(button_frame, "2. Data Cleansing", self.data_cleansing, row=3, column=0)
+        self.create_button(button_frame, "3. Format Revisioning", self.format_revisioning, row=4, column=0)
+        self.create_button(button_frame, "4. Merging / Joining", self.data_merging, row=1, column=1)
+        self.create_button(button_frame, "5. Data Derivation", self.data_derivation, row=2, column=1)
+        self.create_button(button_frame, "6. Data Aggregation", self.data_aggregation, row=3, column=1)
+        self.create_button(button_frame, "7. Descriptive Statistics", self.descriptive_statistics, row=4, column=1)
+        self.create_button(button_frame, "8. Data Visualization", self.data_visualization, row=5, column=0, color="#007ACC")
+        self.create_button(button_frame, "Preview Dataset", self.preview_dataset, row=5, column=1, color="#FF9800")
+        self.create_button(button_frame, "Save Data", self.save_data, row=6, column=0, color="#FF5722")
+
+    def create_button(self, frame, text, command, row, column, color="#007ACC"):
+        """Helper to create styled buttons and place them in a grid layout."""
+        button = ctk.CTkButton(
+            frame,
+            text=text,
+            command=command,
+            width=300,
+            height=50,
+            corner_radius=8,
+            fg_color=color,
+            hover_color="#005EA6",
+            text_color="white",
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        button.grid(row=row, column=column, pady=10, padx=10, sticky="nsew")
+
+        # Ensure buttons expand nicely
+        frame.grid_rowconfigure(row, weight=1)
+        frame.grid_columnconfigure(column, weight=1)
+
+    def setup_footer(self):
+        """Set up the footer section."""
+        footer_frame = ctk.CTkFrame(self.root, fg_color="#f0f4f8")
+        footer_frame.pack(fill="x", pady=10)
+
+        footer_label = ctk.CTkLabel(
+            footer_frame,
+            text="",
+            font=ctk.CTkFont(size=12, weight="normal"),
+            text_color="#6C757D"
+        )
+        footer_label.pack(pady=10)
+
+    # def upload_file(self):
+    #     """Allow the user to upload a file."""
+    #     file_path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), ("Excel Files", "*.xlsx")])
+    #     if file_path:
+    #         try:
+    #             if file_path.endswith(".csv"):
+    #                 self.data = pd.read_csv(file_path)
+    #             elif file_path.endswith(".xlsx"):
+    #                 self.data = pd.read_excel(file_path)
+    #             messagebox.showinfo("File Upload", "File loaded successfully!")
+    #         except Exception as e:
+    #             messagebox.showerror("Error", f"Failed to load file: {str(e)}")
+
+    def preview_dataset(self):
+        """Preview the loaded dataset in a scrollable table."""
+        if self.data is not None:
+            preview_window = tk.Toplevel(self.root)
+            preview_window.title("Dataset Preview")
+            preview_window.geometry("850x500")
+            preview_window.resizable(True, True)
+
+            # Create a Frame to hold the Treeview and scrollbars
+            frame = tk.Frame(preview_window)
+            frame.pack(fill=tk.BOTH, expand=True)
+
+            # Create a Treeview widget for displaying the dataset
+            tree = ttk.Treeview(frame, columns=list(self.data.columns), show="headings")
+            tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+            # Add column headers
+            for column in self.data.columns:
+                tree.heading(column, text=column)
+                tree.column(column, width=100, anchor="center")
+
+            # Add rows to the Treeview
+            for index, row in self.data.iterrows():
+                tree.insert("", "end", values=row.tolist())
+
+            # Add a vertical scrollbar
+            v_scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+            v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            tree.configure(yscrollcommand=v_scrollbar.set)
+
+            # Add a horizontal scrollbar
+            h_scrollbar = ttk.Scrollbar(preview_window, orient="horizontal", command=tree.xview)
+            h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+            tree.configure(xscrollcommand=h_scrollbar.set)
+
+        else:
+            messagebox.showerror("Error", "No data loaded to preview!")
+
+
 
     def upload_file(self):
         """Handles file upload and loading of CSV data."""
@@ -32,8 +179,6 @@ class DataOperations:
                 messagebox.showerror("Error", f"Failed to load file: {str(e)}")
         else:
             messagebox.showerror("Error", "No File Selected!")
-        pass
-
 
     def data_deduplication(self, subset_columnss=None):
         """
@@ -79,7 +224,6 @@ class DataOperations:
         else:
             messagebox.showerror("Error", "No Data Loaded!")
 
-        pass
 
     def data_cleansing(self):
         """Enhanced Data Cleansing with custom strategies, validation, and logging."""
@@ -153,7 +297,8 @@ class DataOperations:
                 messagebox.showerror("Error", f"Data Cleansing Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass
+
+
 
     def format_revisioning(self):
         """Automatic Format Revisioning: Detect and convert numeric columns to int or float."""
@@ -197,7 +342,8 @@ class DataOperations:
                 messagebox.showerror("Error", f"Format Revisioning Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass
+
+ 
 
     def data_merging(self):
     
@@ -216,7 +362,7 @@ class DataOperations:
 
                 # Dropdown for merging options
                 merge_options = ["Inner Merge", "Outer Merge", "Left Merge", "Right Merge","Concatenate (Side by Side)"]
-                merge_choice = select_from_dropdown(
+                merge_choice = self.select_from_dropdown(
                     "Merge Options",
                     "Choose the type of merging operation:",
                     merge_options
@@ -230,7 +376,9 @@ class DataOperations:
                     messagebox.showinfo(
                         "Data Merging",
                         "Data concatenated successfully side by side!"
-                    )            
+                    )
+
+                
                 else:
                     # Select Inner or Outer merge
                     join_type = None
@@ -255,8 +403,39 @@ class DataOperations:
                 messagebox.showerror("Error", f"Data Merging Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass
 
+    def select_from_dropdown(self, title, message, options):
+        """Helper to let the user select an option from a dropdown menu."""
+        self.selected_value = None
+
+        top = tk.Toplevel(self.root)
+        top.title(title)
+
+        tk.Label(top, text=message, font=("Arial", 12)).pack(pady=10)
+
+        # Dropdown for options
+        selected_option = tk.StringVar(top)
+        selected_option.set("Select an option")  # Default value
+
+        dropdown = tk.OptionMenu(top, selected_option, *options)
+        dropdown.pack(pady=10)
+
+        # Confirm button to finalize selection
+        def confirm_selection():
+            self.selected_value = selected_option.get()
+            if self.selected_value == "Select an option":
+                self.selected_value = None  # Treat as no selection
+            top.destroy()
+
+        tk.Button(top, text="Confirm", width=15, command=confirm_selection).pack(pady=5)
+        tk.Button(top, text="Back", bg="red", fg="white", width=15, command=top.destroy).pack(pady=5)
+
+        self.root.wait_window(top)
+        return self.selected_value
+
+
+ 
+ 
     def data_derivation(self):
         """Performs data derivation or custom aggregation based on user selection."""
         if self.data is not None:
@@ -268,7 +447,7 @@ class DataOperations:
                     return
 
                 # Step 2: Select derivation type
-                derivation_type = select_from_dropdown(
+                derivation_type = self.select_from_dropdown(
                     "Select Derivation Type",
                     "Choose the type of derivation to perform:",
                     ["Binary Operation (Two Columns)", "Custom Aggregation (Single Column)"]
@@ -278,7 +457,7 @@ class DataOperations:
 
                 # If Binary Operation
                 if derivation_type == "Binary Operation (Two Columns)":
-                    column1 = select_from_dropdown(
+                    column1 = self.select_from_dropdown(
                         "Select First Numeric Column",
                         "Choose the first numeric column for derivation:",
                         numeric_cols
@@ -286,7 +465,7 @@ class DataOperations:
                     if not column1:
                         return  # User clicked Back
 
-                    column2 = select_from_dropdown(
+                    column2 = self.select_from_dropdown(
                         "Select Second Numeric Column",
                         "Choose the second numeric column for derivation:",
                         numeric_cols
@@ -300,7 +479,7 @@ class DataOperations:
 
                     # Step 3: Define the operation for derivation
                     operations = ['+', '-', '*', '/', '%']  # Binary operations
-                    derivation_operation = select_from_dropdown(
+                    derivation_operation = self.select_from_dropdown(
                         f"Define Operation for {column1} and {column2}",
                         "Choose a binary operation to apply:",
                         operations
@@ -325,7 +504,7 @@ class DataOperations:
 
                 # If Custom Aggregation
                 elif derivation_type == "Custom Aggregation (Single Column)":
-                    column = select_from_dropdown(
+                    column = self.select_from_dropdown(
                         "Select Numeric Column",
                         "Choose a numeric column to aggregate:",
                         numeric_cols
@@ -334,7 +513,7 @@ class DataOperations:
                         return  # User clicked Back
 
                     # Step 4: Define custom aggregation
-                    aggregation_type = select_from_dropdown(
+                    aggregation_type = self.select_from_dropdown(
                         f"Custom Aggregation for {column}",
                         "Choose a custom aggregation to apply:",
                         ["Sum and Divide by 2", "Operation with a Number", "Mean", "Count"]
@@ -351,7 +530,7 @@ class DataOperations:
                         elif aggregation_type == "Operation with a Number":
                             # Select operation
                             operations = ['+', '-', '*', '/']  # Basic math operations
-                            operation = select_from_dropdown(
+                            operation = self.select_from_dropdown(
                                 "Select Operation",
                                 f"Choose an operation to apply to {column}:",
                                 operations
@@ -393,14 +572,47 @@ class DataOperations:
                 messagebox.showerror("Error", f"Data Derivation Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass
+
+
+
+
+    def select_from_dropdown(self, title, message, options):
+        """Helper to let the user select an option from a dropdown menu."""
+        self.selected_value = None
+
+        top = tk.Toplevel(self.root)
+        top.title(title)
+
+        tk.Label(top, text=message, font=("Arial", 12)).pack(pady=10)
+
+        # Dropdown for options
+        selected_option = tk.StringVar(top)
+        selected_option.set("Select an option")  # Default value
+
+        dropdown = tk.OptionMenu(top, selected_option, *options)
+        dropdown.pack(pady=10)
+
+        # Confirm button to finalize selection
+        def confirm_selection():
+            self.selected_value = selected_option.get()
+            if self.selected_value == "Select an option":
+                self.selected_value = None  # Treat as no selection
+            top.destroy()
+
+        tk.Button(top, text="Confirm", width=15, command=confirm_selection).pack(pady=5)
+        tk.Button(top, text="Back", bg="red", fg="white", width=15, command=top.destroy).pack(pady=5)
+
+        self.root.wait_window(top)
+        return self.selected_value
+
+
 
     def data_aggregation(self):
         """Automates data aggregation: extracting columns or grouping with aggregation metrics."""
         if self.data is not None:
             try:
                 # Step 1: Choose operation type: extract column or group by
-                operation_type = single_select_from_dropdown(
+                operation_type = self.single_select_from_dropdown(
                     "Select Operation",
                     "Would you like to extract specific columns or perform a group-by operation?",
                     ["Extract Column", "Group By"]
@@ -411,7 +623,7 @@ class DataOperations:
 
                 # Option 1: Extract specific columns
                 if operation_type == "Extract Column":
-                    selected_columns = multi_select_from_dropdown(
+                    selected_columns = self.multi_select_from_dropdown(
                         "Select Columns to Extract",
                         "Choose one or more columns to extract:",
                         self.data.columns.tolist()
@@ -422,7 +634,7 @@ class DataOperations:
 
                     # Extract selected columns and save as a new dataset
                     extracted_data = self.data[selected_columns]
-                    save_path = save_to_file_dialog("Save Extracted Data", "extracted_data.csv")
+                    save_path = self.save_to_file_dialog("Save Extracted Data", "extracted_data.csv")
                     if save_path:
                         extracted_data.to_csv(save_path, index=False)
                         messagebox.showinfo("Data Extraction", "Columns extracted and saved successfully!")
@@ -430,7 +642,7 @@ class DataOperations:
                 # Option 2: Group by and aggregate
                 elif operation_type == "Group By":
                     # Step 2: Select columns for grouping
-                    grouping_columns = multi_select_from_dropdown(
+                    grouping_columns = self.multi_select_from_dropdown(
                         "Select Grouping Columns",
                         "Choose one or more columns to group by:",
                         self.data.columns.tolist()
@@ -445,7 +657,7 @@ class DataOperations:
                         messagebox.showerror("Error", "No numeric columns available for aggregation.")
                         return
 
-                    selected_numeric_cols = multi_select_from_dropdown(
+                    selected_numeric_cols = self.multi_select_from_dropdown(
                         "Select Numeric Columns",
                         "Choose one or more numeric columns to aggregate:",
                         numeric_cols
@@ -457,7 +669,7 @@ class DataOperations:
                     # Step 4: Select aggregation metrics for each numeric column
                     aggregation_selections = {}
                     for col in selected_numeric_cols:
-                        metrics = multi_select_from_dropdown(
+                        metrics = self.multi_select_from_dropdown(
                             f"Select Aggregation Metrics for {col}",
                             f"Choose one or more metrics for {col}:",
                             ['mean', 'sum', 'count', 'max', 'min', 'median', 'std']
@@ -477,7 +689,7 @@ class DataOperations:
                     aggregated_data = aggregated_data.reset_index()
 
                     # Save aggregated data
-                    save_path = save_to_file_dialog("Save Aggregated Data", "aggregated_data.csv")
+                    save_path = self.save_to_file_dialog("Save Aggregated Data", "aggregated_data.csv")
                     if save_path:
                         aggregated_data.to_csv(save_path, index=False)
                         messagebox.showinfo("Data Aggregation", "Data aggregated and saved successfully!")
@@ -486,8 +698,60 @@ class DataOperations:
                 messagebox.showerror("Error", f"Data Aggregation Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass
-    
+
+    def single_select_from_dropdown(self, title, message, options):
+        """Creates a single-selection dropdown dialog and returns the selected item."""
+        import tkinter as tk
+        from tkinter import simpledialog
+
+        class SingleSelectDialog(simpledialog.Dialog):
+            def __init__(self, parent, title, message, options):
+                self.options = options
+                self.selected_item = None
+                super().__init__(parent, title)
+
+            def body(self, master):
+                tk.Label(master, text=message).grid(row=0, column=0, columnspan=2, sticky='w')
+                self.var = tk.StringVar(value=options[0])
+                self.dropdown = tk.OptionMenu(master, self.var, *options)
+                self.dropdown.grid(row=1, column=0, columnspan=2)
+                return self.dropdown
+
+            def apply(self):
+                self.selected_item = self.var.get()
+
+        dialog = SingleSelectDialog(None, title, message, options)
+        return dialog.selected_item
+
+    def save_to_file_dialog(self, title, default_filename):
+        """Creates a save file dialog and returns the selected file path."""
+        from tkinter import filedialog
+        return filedialog.asksaveasfilename(title=title, defaultextension=".csv", initialfile=default_filename)
+
+    def multi_select_from_dropdown(self, title, message, options):
+
+        class MultiSelectDialog(simpledialog.Dialog):
+            def __init__(self, parent, title, message, options):
+                self.options = options
+                self.selected_items = []
+                super().__init__(parent, title)
+
+            def body(self, master):
+                tk.Label(master, text=message).grid(row=0, column=0, columnspan=2, sticky='w')
+                self.listbox = tk.Listbox(master, selectmode=tk.MULTIPLE, height=10, exportselection=0)
+                for option in self.options:
+                    self.listbox.insert(tk.END, option)
+                self.listbox.grid(row=1, column=0, columnspan=2)
+                return self.listbox
+
+            def apply(self):
+                selections = self.listbox.curselection()
+                self.selected_items = [self.options[i] for i in selections]
+
+        dialog = MultiSelectDialog(None, title, message, options)
+        return dialog.selected_items
+
+ 
 
     def descriptive_statistics(self):
         """Enhanced Descriptive Statistics displayed in a table."""
@@ -505,20 +769,55 @@ class DataOperations:
                 stats.loc['kurtosis'] = kurtosis
 
                 # Display the statistics in a table
-                show_stats_table(stats)
+                self.show_stats_table(stats)
             except Exception as e:
                 messagebox.showerror("Error", f"Statistics Generation Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass   
 
+
+    def show_stats_table( stats):
+            """Displays combined descriptive statistics, skewness, and kurtosis in a table."""
+            # Create a new window
+            window = Toplevel()
+            window.title("Descriptive Statistics")
+
+            # Add a label for the window
+            Label(window, text="Descriptive Statistics", font=("Arial", 14, "bold")).pack(pady=10)
+
+            # Create a Treeview widget
+            tree = ttk.Treeview(window, columns=['Statistic'] + list(stats.columns), show="headings", height=15)
+            tree.pack(fill="both", expand=True)
+
+            # Define headings for the Treeview
+            tree.heading('Statistic', text='Statistic')
+            tree.column('Statistic', anchor="center", width=150)
+            for col in stats.columns:
+                tree.heading(col, text=col)
+                tree.column(col, anchor="center", width=100)
+
+            # Insert data into the Treeview
+            for index, row in stats.iterrows():
+                tree.insert("", "end", values=[index] + list(row.values))
+
+            # Add vertical and horizontal scrollbars
+            v_scrollbar = ttk.Scrollbar(window, orient="vertical", command=tree.yview)
+            h_scrollbar = ttk.Scrollbar(window, orient="horizontal", command=tree.xview)
+            tree.configure(yscroll=v_scrollbar.set, xscroll=h_scrollbar.set)
+            v_scrollbar.pack(side="right", fill="y")
+            h_scrollbar.pack(side="bottom", fill="x")
+
+            # Allow the window to resize
+            window.geometry("800x400")
+            window.mainloop()
+            
     def data_visualization(self):
         """Allows the user to choose visualization type and columns using dropdowns."""
         if self.data is not None:
             try:
                 # Step 1: Select Visualization Type
                 vis_types = ["bar", "scatter", "histogram"]
-                vis_type = select_from_dropdown(
+                vis_type = self.select_from_dropdown(
                     "Select Visualization Type",
                     "Choose a visualization type:",
                     vis_types
@@ -527,7 +826,7 @@ class DataOperations:
                     return  # User clicked Back
 
                 # Step 2: Select X-axis Column
-                x_axis_column = select_from_dropdown(
+                x_axis_column = self.select_from_dropdown(
                     "Select X-axis Column",
                     "Choose a column for the X-axis:",
                     self.data.columns
@@ -538,7 +837,7 @@ class DataOperations:
                 # Step 3: Select Y-axis Column (optional for certain visualizations)
                 y_axis_column = None
                 if vis_type in ["bar", "scatter"]:
-                    y_axis_column = select_from_dropdown(
+                    y_axis_column = self.select_from_dropdown(
                         "Select Y-axis Column",
                         "Choose a column for the Y-axis:",
                         self.data.columns
@@ -565,59 +864,24 @@ class DataOperations:
                 messagebox.showerror("Error", f"Data Visualization Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass
-
-    def preview_dataset(self):
-        """Preview the loaded dataset in a scrollable table."""
-        if self.data is not None:
-            preview_window = tk.Toplevel(self.root)
-            preview_window.title("Dataset Preview")
-            preview_window.geometry("850x500")
-            preview_window.resizable(True, True)
-
-            # Create a Frame to hold the Treeview and scrollbars
-            frame = tk.Frame(preview_window)
-            frame.pack(fill=tk.BOTH, expand=True)
-
-            # Create a Treeview widget for displaying the dataset
-            tree = ttk.Treeview(frame, columns=list(self.data.columns), show="headings")
-            tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-            # Add column headers
-            for column in self.data.columns:
-                tree.heading(column, text=column)
-                tree.column(column, width=100, anchor="center")
-
-            # Add rows to the Treeview
-            for index, row in self.data.iterrows():
-                tree.insert("", "end", values=row.tolist())
-
-            # Add a vertical scrollbar
-            v_scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
-            v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-            tree.configure(yscrollcommand=v_scrollbar.set)
-
-            # Add a horizontal scrollbar
-            h_scrollbar = ttk.Scrollbar(preview_window, orient="horizontal", command=tree.xview)
-            h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
-            tree.configure(xscrollcommand=h_scrollbar.set)
-
-        else:
-            messagebox.showerror("Error", "No data loaded to preview!")
-        pass
 
     def save_data(self):
-        if self.data is not None:
-            save_path = filedialog.asksaveasfilename(
-                defaultextension=".csv",
-                filetypes=[("CSV Files", "*.csv")]
-            )
-            if save_path:
-                try:
-                    self.data.to_csv(save_path, index=False)
-                    messagebox.showinfo("Success", "Data Saved Successfully!")
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to save file: {str(e)}")
-        else:
-            messagebox.showerror("Error", "No Data Loaded!")
-        pass
+                if self.data is not None:
+                    save_path = filedialog.asksaveasfilename(
+                        defaultextension=".csv",
+                        filetypes=[("CSV Files", "*.csv")]
+                    )
+                    if save_path:
+                        try:
+                            self.data.to_csv(save_path, index=False)
+                            messagebox.showinfo("Success", "Data Saved Successfully!")
+                        except Exception as e:
+                            messagebox.showerror("Error", f"Failed to save file: {str(e)}")
+                else:
+                    messagebox.showerror("Error", "No Data Loaded!")
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = DataTransformationApp(root)
+    root.mainloop()
