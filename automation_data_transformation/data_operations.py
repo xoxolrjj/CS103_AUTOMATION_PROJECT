@@ -19,14 +19,17 @@ class DataOperations:
         
 
     def upload_file(self):
-        """Handles file upload and loading of CSV data."""
+        """Handles file upload and loading of CSV or XLSX data."""
         self.file_path = filedialog.askopenfilename(
             title="Select a File",
-            filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")]
+            filetypes=[("CSV Files", "*.csv"), ("Excel Files", "*.xlsx")]
         )
         if self.file_path:
             try:
-                self.data = pd.read_csv(self.file_path)
+                if self.file_path.endswith('.csv'):
+                    self.data = pd.read_csv(self.file_path)
+                elif self.file_path.endswith('.xlsx'):
+                    self.data = pd.read_excel(self.file_path)
                 messagebox.showinfo("Success", "File Uploaded Successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load file: {str(e)}")
@@ -221,19 +224,29 @@ class DataOperations:
 
 
     def data_merging(self):
+        """Handles merging of the loaded data with another dataset selected by the user."""
     
         if self.data is not None:
             try:
+
                 # Load the second file for merging
                 file_to_merge = filedialog.askopenfilename(
                     title="Select File to Merge",
-                    filetypes=[("CSV Files", "*.csv")]
+                    filetypes=[("CSV Files", "*.csv"), ("Excel Files", "*.xlsx")]
                 )
                 if not file_to_merge:
                     messagebox.showerror("Error", "No File Selected for Merging!")
                     return
 
-                other_data = pd.read_csv(file_to_merge)
+                try:
+                    if file_to_merge.endswith('.csv'):
+                        other_data = pd.read_csv(file_to_merge)
+                    elif file_to_merge.endswith('.xlsx'):
+                        other_data = pd.read_excel(file_to_merge)
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to load file: {str(e)}")
+                    return
+
 
                 # Dropdown for merging options
                 merge_options = ["Inner Merge", "Outer Merge", "Left Join", "Right Join","Concatenate (Side by Side)"]
@@ -247,7 +260,9 @@ class DataOperations:
                 
                 if merge_choice == "Concatenate (Side by Side)":
                     # Perform concatenation
-                    self.data = pd.concat([self.data, other_data], axis=1)
+                    # Ensure unique column names before concatenation
+                    other_data.columns = [f"{col}_2" if col in self.data.columns else col for col in other_data.columns]
+                    self.data = pd.concat([self.data, other_data], axis=1, ignore_index=False)
                     messagebox.showinfo(
                         "Data Merging",
                         "Data concatenated successfully side by side!"
@@ -266,11 +281,12 @@ class DataOperations:
                      # Perform the merge
                     merged_data = pd.merge(self.data, other_data, how=join_type)
                     self.data = merged_data
-
+        
                     messagebox.showinfo(
                         "Data Merging",
                         f"Data merged successfully with {join_type.title()} join!"
                     )
+                self.preview_dataset()
 
             except Exception as e:
                 messagebox.showerror("Error", f"Data Merging Failed: {str(e)}")
