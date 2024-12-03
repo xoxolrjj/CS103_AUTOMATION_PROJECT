@@ -35,51 +35,59 @@ class DataOperations:
         pass
 
 
-    def data_deduplication(self, subset_columnss=None):
-        """
-        Enhanced Data Deduplication with preview, logging, and column information.
-
-        :param subset_columns: List of column names to check for duplicates . 
-                            If None, all columns are used.
-        """
+    def data_deduplication(self, subset_columns = None):
+        """Performs deduplication on the loaded data after user confirmation and previews columns."""
         if self.data is not None:
             try:
-                # Determine the subset of columns for deduplication
-                columns_used = subset_columnss if subset_columnss else self.data.columns.tolist()
+                # Step 1: Preview the columns of the data
+                
+                column_used = subset_columns if subset_columns else self.data.columns.tolist()
 
-                # Preview duplicate rows
-                duplicate_rows = self.data[self.data.duplicated(subset=columns_used)]
-                if not duplicate_rows.empty:
-                    # Formatting the preview to show each duplicate row with column names and values
+                deduplicated_rows = self.data[self.data.duplicated(subset=column_used)]
+
+                if not deduplicated_rows.empty:
+
                     preview_message = "Preview of Duplicate Rows (with column details):\n"
-                    for index, row in duplicate_rows.iterrows():
-                        row_details = {col: row[col] for col in columns_used}
+                    for index,row in deduplicated_rows.iterrows():
+                        row_details = {col: row[col] for col in column_used}
                         preview_message += f"\nRow {index + 1}: {row_details}"
+                # preview_message = f"The data contains the following columns:\n{', '.join(self.data.columns)}\n\n"
+                # preview_message += "Would you like to proceed with deduplication?"
 
-                    # Show the preview in a message box
-                    messagebox.showinfo(
-                        "Preview Duplicates",
-                        f"Columns Used for Deduplication: {', '.join(columns_used)}\n\n{preview_message}"
-                    )
-
-                # Perform deduplication
-                original_count = len(self.data)
-                self.data = self.data.drop_duplicates(subset=columns_used)
-                deduplicated_count = len(self.data)
-
-                # Log details
-                messagebox.showinfo(
-                    "Deduplication Results",
-                    f"Columns Used for Deduplication: {', '.join(columns_used)}\n"
-                    f"Duplicates Removed: {original_count - deduplicated_count}\n"
-                    f"Remaining Rows: {deduplicated_count}"
+                # Step 2: Ask the user for confirmation
+                confirm_deduplication = messagebox.askyesno(
+                    "Preview Deduplication",
+                    f"Columns Used for Deduplication: {','.join(column_used)}\n\n{preview_message}"
                 )
+
+                if not confirm_deduplication:
+                    messagebox.showinfo("Data Deduplication", "Operation canceled by the user.")
+                    return
+
+                # Step 3: Perform deduplication
+                original_rows = len(self.data)
+                self.data = self.data.drop_duplicates()
+                deduplicated_rows = len(self.data)
+                removed_rows = original_rows - deduplicated_rows
+
+                # Step 4: Notify the user of the results
+                messagebox.showinfo(
+                    "Deduplication Completed",
+                    f"Deduplication completed successfully!\n"
+                    f"Original Rows: {original_rows}\n"
+                    f"Deduplicated Rows: {deduplicated_rows}\n"
+                    f"Duplicates Removed: {removed_rows}"
+                )
+
+                # Step 5: Automatically preview the deduplicated file
+                self.preview_dataset()
+
             except Exception as e:
                 messagebox.showerror("Error", f"Data Deduplication Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
 
-        pass
+
 
     def data_cleansing(self):
         """Enhanced Data Cleansing with custom strategies, validation, and logging."""
@@ -149,23 +157,36 @@ class DataOperations:
 
                 # Show log
                 messagebox.showinfo("Data Cleansing Summary", cleansing_log)
+
+                # Automatically preview the cleansed dataset
+                self.preview_dataset()
+
             except Exception as e:
                 messagebox.showerror("Error", f"Data Cleansing Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass
+
 
     def format_revisioning(self):
         """Automatic Format Revisioning: Detect and convert numeric columns to int or float."""
         if self.data is not None:
             try:
-                # Step 1: Identify numeric columns
+                # Step 1: Display current data types
+                data_types = self.data.dtypes.to_string()
+                proceed = messagebox.askyesno(
+                    "Current Data Types",
+                    f"Here are the current data types of your dataset:\n\n{data_types}\n\nDo you want to proceed with Format Revisioning?"
+                )
+                if not proceed:
+                    return
+
+                # Step 2: Identify numeric columns
                 numeric_cols = self.data.select_dtypes(include=['int64', 'float64']).columns
                 if numeric_cols.empty:
                     messagebox.showinfo("No Numeric Columns", "No numeric columns to revise.")
                     return
 
-                # Step 2: Process each numeric column
+                # Step 3: Process each numeric column
                 revised_columns = []
                 for col in numeric_cols:
                     try:
@@ -197,7 +218,7 @@ class DataOperations:
                 messagebox.showerror("Error", f"Format Revisioning Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass
+
 
     def data_merging(self):
     
@@ -215,7 +236,7 @@ class DataOperations:
                 other_data = pd.read_csv(file_to_merge)
 
                 # Dropdown for merging options
-                merge_options = ["Inner Merge", "Outer Merge", "Left Merge", "Right Merge","Concatenate (Side by Side)"]
+                merge_options = ["Inner Merge", "Outer Merge", "Left Join", "Right Join","Concatenate (Side by Side)"]
                 merge_choice = select_from_dropdown(
                     "Merge Options",
                     "Choose the type of merging operation:",
@@ -238,9 +259,9 @@ class DataOperations:
                         join_type = "inner"
                     elif merge_choice == "Outer Merge":
                         join_type = "outer"
-                    elif merge_choice == "Right Merge":
+                    elif merge_choice == "Right Join":
                         join_type = "right"
-                    elif merge_choice == "Left Merge":
+                    elif merge_choice == "Left Join":
                         join_type = "left"
                      # Perform the merge
                     merged_data = pd.merge(self.data, other_data, how=join_type)
@@ -389,104 +410,111 @@ class DataOperations:
                     except Exception as e:
                         messagebox.showerror("Error", f"Invalid operation: {str(e)}")
 
+                # Automatically preview the dataset
+                self.preview_dataset()
+
             except Exception as e:
                 messagebox.showerror("Error", f"Data Derivation Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass
+
 
     def data_aggregation(self):
-        """Automates data aggregation: extracting columns or grouping with aggregation metrics."""
-        if self.data is not None:
-            try:
-                # Step 1: Choose operation type: extract column or group by
-                operation_type = single_select_from_dropdown(
-                    "Select Operation",
-                    "Would you like to extract specific columns or perform a group-by operation?",
-                    ["Extract Column", "Group By"]
+        """Automates data aggregation: extracting specific columns or grouping with aggregation metrics.
+        """
+        if self.data is None:
+            messagebox.showerror("Error", "No Data Loaded!")
+            return
+
+        try:
+            # Step 1: Choose operation type: Extract Columns or Group By
+            operation_type = single_select_from_dropdown(
+                "Select Aggregation Type",
+                "Would you like to extract specific columns or perform a group-by operation?",
+                ["Extract Columns", "Group By"]
+            )
+            if not operation_type:
+                messagebox.showwarning("Data Aggregation", "No operation selected.")
+                return
+
+            # Option 1: Extract Columns
+            if operation_type == "Extract Columns":
+                selected_columns = multi_select_from_dropdown(
+                    "Select Columns to Extract",
+                    "Choose one or more columns to extract:",
+                    self.data.columns.tolist()
                 )
-                if not operation_type:
-                    messagebox.showwarning("Data Aggregation", "No operation selected.")
+                if not selected_columns:
+                    messagebox.showwarning("Data Aggregation", "No columns selected.")
                     return
 
-                # Option 1: Extract specific columns
-                if operation_type == "Extract Column":
-                    selected_columns = multi_select_from_dropdown(
-                        "Select Columns to Extract",
-                        "Choose one or more columns to extract:",
-                        self.data.columns.tolist()
+                # Extract selected columns
+                extracted_data = self.data[selected_columns]
+
+                # Save extracted columns as a new dataset
+                save_path = save_to_file_dialog("Save Extracted Data", "extracted_data.csv")
+                if save_path:
+                    extracted_data.to_csv(save_path, index=False)
+                    messagebox.showinfo("Data Aggregation", "Columns extracted and saved successfully!")
+
+            # Option 2: Group By and Aggregate
+            elif operation_type == "Group By":
+                # Step 2: Select columns for grouping
+                grouping_columns = multi_select_from_dropdown(
+                    "Select Grouping Columns",
+                    "Choose one or more columns to group by:",
+                    self.data.columns.tolist()
+                )
+                if not grouping_columns:
+                    messagebox.showwarning("Data Aggregation", "No grouping columns selected.")
+                    return
+
+                # Step 3: Select numeric columns for aggregation
+                numeric_cols = self.data.select_dtypes(include=['int64', 'float64']).columns.tolist()
+                if not numeric_cols:
+                    messagebox.showerror("Error", "No numeric columns available for aggregation.")
+                    return
+
+                selected_numeric_cols = multi_select_from_dropdown(
+                    "Select Numeric Columns",
+                    "Choose one or more numeric columns to aggregate:",
+                    numeric_cols
+                )
+                if not selected_numeric_cols:
+                    messagebox.showwarning("Data Aggregation", "No numeric columns selected.")
+                    return
+
+                # Step 4: Define aggregation metrics for each numeric column
+                aggregation_selections = {}
+                for col in selected_numeric_cols:
+                    metrics = multi_select_from_dropdown(
+                        f"Select Aggregation Metrics for {col}",
+                        f"Choose one or more metrics for {col}:",
+                        ['mean', 'sum', 'count', 'max', 'min', 'median', 'std']
                     )
-                    if not selected_columns:
-                        messagebox.showwarning("Data Aggregation", "No columns selected.")
-                        return
+                    if metrics:
+                        aggregation_selections[col] = metrics
 
-                    # Extract selected columns and save as a new dataset
-                    extracted_data = self.data[selected_columns]
-                    save_path = save_to_file_dialog("Save Extracted Data", "extracted_data.csv")
-                    if save_path:
-                        extracted_data.to_csv(save_path, index=False)
-                        messagebox.showinfo("Data Extraction", "Columns extracted and saved successfully!")
+                if not aggregation_selections:
+                    messagebox.showerror("Error", "No aggregation metrics selected.")
+                    return
 
-                # Option 2: Group by and aggregate
-                elif operation_type == "Group By":
-                    # Step 2: Select columns for grouping
-                    grouping_columns = multi_select_from_dropdown(
-                        "Select Grouping Columns",
-                        "Choose one or more columns to group by:",
-                        self.data.columns.tolist()
-                    )
-                    if not grouping_columns:
-                        messagebox.showwarning("Data Aggregation", "No grouping columns selected.")
-                        return
+                # Step 5: Perform Group-By Aggregation
+                aggregated_data = self.data.groupby(grouping_columns).agg(aggregation_selections)
 
-                    # Step 3: Select numeric columns for aggregation
-                    numeric_cols = self.data.select_dtypes(include=['int64', 'float64']).columns.tolist()
-                    if not numeric_cols:
-                        messagebox.showerror("Error", "No numeric columns available for aggregation.")
-                        return
+                # Clean column names: Flatten MultiIndex
+                aggregated_data.columns = ['_'.join(col).strip() for col in aggregated_data.columns.values]
+                aggregated_data.reset_index(inplace=True)
 
-                    selected_numeric_cols = multi_select_from_dropdown(
-                        "Select Numeric Columns",
-                        "Choose one or more numeric columns to aggregate:",
-                        numeric_cols
-                    )
-                    if not selected_numeric_cols:
-                        messagebox.showwarning("Data Aggregation", "No numeric columns selected.")
-                        return
+                # Save the aggregated dataset
+                save_path = save_to_file_dialog("Save Aggregated Data", "aggregated_data.csv")
+                if save_path:
+                    aggregated_data.to_csv(save_path, index=False)
+                    messagebox.showinfo("Data Aggregation", "Data aggregated and saved successfully!")
 
-                    # Step 4: Select aggregation metrics for each numeric column
-                    aggregation_selections = {}
-                    for col in selected_numeric_cols:
-                        metrics = multi_select_from_dropdown(
-                            f"Select Aggregation Metrics for {col}",
-                            f"Choose one or more metrics for {col}:",
-                            ['mean', 'sum', 'count', 'max', 'min', 'median', 'std']
-                        )
-                        if metrics:
-                            aggregation_selections[col] = metrics
+        except Exception as e:
+            messagebox.showerror("Error", f"Data Aggregation Failed: {str(e)}")
 
-                    if not aggregation_selections:
-                        messagebox.showerror("Error", "No aggregation metrics selected.")
-                        return
-
-                    # Step 5: Perform aggregation
-                    aggregated_data = self.data.groupby(grouping_columns).agg(aggregation_selections)
-
-                    # Resetting column names to a cleaner format
-                    aggregated_data.columns = ['_'.join(col).strip() for col in aggregated_data.columns.values]
-                    aggregated_data = aggregated_data.reset_index()
-
-                    # Save aggregated data
-                    save_path = save_to_file_dialog("Save Aggregated Data", "aggregated_data.csv")
-                    if save_path:
-                        aggregated_data.to_csv(save_path, index=False)
-                        messagebox.showinfo("Data Aggregation", "Data aggregated and saved successfully!")
-
-            except Exception as e:
-                messagebox.showerror("Error", f"Data Aggregation Failed: {str(e)}")
-        else:
-            messagebox.showerror("Error", "No Data Loaded!")
-        pass
     
 
     def descriptive_statistics(self):
@@ -498,11 +526,11 @@ class DataOperations:
 
                 # Calculate additional metrics
                 skewness = self.data.skew(numeric_only=True)
-                kurtosis = self.data.kurtosis(numeric_only=True)
+                # kurtosis = self.data.kurtosis(numeric_only=True)
 
                 # Combine skewness and kurtosis with descriptive stats
                 stats.loc['skewness'] = skewness
-                stats.loc['kurtosis'] = kurtosis
+                # stats.loc['kurtosis'] = kurtosis
 
                 # Display the statistics in a table
                 show_stats_table(stats)
@@ -517,7 +545,7 @@ class DataOperations:
         if self.data is not None:
             try:
                 # Step 1: Select Visualization Type
-                vis_types = ["bar", "scatter", "histogram"]
+                vis_types = ["bar", "scatter", "histogram", "pie"]  # Added 'pie' option
                 vis_type = select_from_dropdown(
                     "Select Visualization Type",
                     "Choose a visualization type:",
@@ -554,6 +582,12 @@ class DataOperations:
                     sns.scatterplot(x=self.data[x_axis_column], y=self.data[y_axis_column])
                 elif vis_type == "histogram":
                     sns.histplot(self.data[x_axis_column])
+                elif vis_type == "pie":
+                    # Pie chart requires the use of a single column
+                    # Selecting the values for the pie chart
+                    pie_values = self.data[x_axis_column].value_counts()
+                    plt.pie(pie_values, labels=pie_values.index, autopct='%1.1f%%', startangle=90)
+                    plt.axis('equal')  # Equal aspect ratio ensures the pie chart is circular
                 else:
                     messagebox.showerror("Error", "Invalid Visualization Type!")
                     return
@@ -565,7 +599,7 @@ class DataOperations:
                 messagebox.showerror("Error", f"Data Visualization Failed: {str(e)}")
         else:
             messagebox.showerror("Error", "No Data Loaded!")
-        pass
+
 
     def preview_dataset(self):
         """Preview the loaded dataset in a scrollable table."""

@@ -53,17 +53,17 @@ class DataTransformationApp:
 
         # Buttons
         self.create_button(button_frame, "Upload Your File", self.data_ops.upload_file, row=1, column=0, color="#4CAF50")
-        self.create_button(button_frame, "1. Data Deduplication", self.data_ops.data_deduplication, row=2, column=0)
-        self.create_button(button_frame, "2. Data Cleansing", self.data_ops.data_cleansing, row=3, column=0)
-        self.create_button(button_frame, "3. Format Revisioning", self.data_ops.format_revisioning, row=4, column=0)
-        self.create_button(button_frame, "4. Merging / Joining", self.data_ops.data_merging,row=5, column=0)
-        self.create_button(button_frame, "5. Data Derivation", self.data_ops.data_derivation, row=1, column=1)
-        self.create_button(button_frame, "6. Data Aggregation", self.data_ops.data_aggregation, row=2, column=1)
-        self.create_button(button_frame, "7. Descriptive Statistics", self.data_ops.descriptive_statistics, row=3, column=1)
-        self.create_button(button_frame, "8. Data Visualization", self.data_ops.data_visualization, row=4, column=1)
+        self.create_button(button_frame, "Data Deduplication", self.data_ops.data_deduplication, row=2, column=0)
+        self.create_button(button_frame, "Data Cleansing", self.data_ops.data_cleansing, row=3, column=0)
+        self.create_button(button_frame, "Format Revisioning", self.data_ops.format_revisioning, row=4, column=0)
+        self.create_button(button_frame, "Merging / Joining", self.data_ops.data_merging,row=5, column=0)
+        self.create_button(button_frame, "Data Derivation", self.data_ops.data_derivation, row=2, column=1)
+        self.create_button(button_frame, "Data Aggregation", self.data_ops.data_aggregation, row=3, column=1)
+        self.create_button(button_frame, "Descriptive Statistics", self.data_ops.descriptive_statistics, row=4, column=1)
+        self.create_button(button_frame, "Data Visualization", self.data_ops.data_visualization, row=5, column=1)
 
-        self.create_button(button_frame, "Preview Dataset", self.data_ops.preview_dataset, row=5, column=1, color="#FF9800")
-        self.create_button(button_frame, "Save Data", self.data_ops.save_data, row=6, column=0, color="#FF5722")
+        self.create_button(button_frame, "Preview Dataset", self.data_ops.preview_dataset, row=1, column=1, color="#FF9800")
+        self.create_button(button_frame, "Save Data", self.data_ops.save_data, row=6, column=1, color="#FF5722")
 
     def create_button(self, frame, text, command, row, column, color="#007ACC"):
         """Helper to create styled buttons and place them in a grid layout."""
